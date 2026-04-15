@@ -24,18 +24,44 @@ app.get('/captions/:videoId', async (req, res) => {
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     };
 
-    // Step 1: fetch YouTube page server-side
     const page = await httpsGet(`https://www.youtube.com/watch?v=${videoId}`, headers);
-    
     const cookieHeader = page.cookies.map(c => c.split(';')[0]).join('; ');
 
-    // Step 2: extract caption URL from page
-    const match = page.body.match(/"captionTracks":\[.*?"baseUrl":"([^"]+)"/);
-    if (!match) return res.status(404).send('No captions found');
+    // Debug: check if page loaded correctly
+    if (page.body.length < 1000) {
+      return res.status(500).send('Page too short: ' + page.body.substring(0, 200));
+    }
 
-    const captionUrl = match[1].replace(/\\u0026/g, '&');
+    // Try multiple patterns
+    let captionUrl = null;
 
-    // Step 3: fetch captions with same session cookies
+    // Pattern 1
+    const m1 = page.body.match(/"baseUrl":"(https:\/\/www\.youtube\.com\/api\/timedtext[^"]+)"/);
+    if (m1) captionUrl = m1[1].replace(/\\u0026/g, '&');
+
+    // Pattern 2
+    if (!captionUrl) {
+      const m2 = page.body.match(/captionTracks.*?"baseUrl":"([^"]+)"/);
+      if (m2) captionUrl = m2[1].replace(/\\u0026/g, '&');
+    }
+
+    // Pattern 3 — find playerCaptionsTracklistRenderer
+    if (!captionUrl) {
+      const idx = page.body.indexOf('playerCaptionsTracklistRenderer');
+      if (idx !== -1) {
+        const chunk = page.body.substring(idx, idx + 2000);
+        const m3 = chunk.match(/"baseUrl":"([^"]+)"/);
+        if (m3) captionUrl = m3[1].replace(/\\u0026/g, '&');
+      }
+    }
+
+    if (!captionUrl) {
+      // Show what we got for debugging
+      const idx = page.body.indexOf('captionTracks');
+      const preview = idx !== -1 ? page.body.substring(idx, idx + 300) : 'captionTracks not found in page';
+      return res.status(404).send('No caption URL found. Debug: ' + preview);
+    }
+
     const captions = await httpsGet(`${captionUrl}&fmt=json3`, {
       ...headers,
       'Cookie': cookieHeader,
