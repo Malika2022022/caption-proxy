@@ -4,7 +4,7 @@
   "main": "server.js",
   "dependencies": {
     "express": "^4.18.0",
-    "@playzone/youtube-transcript": "latest"
+    "youtube-transcript": "^1.2.1"
   },
   "scripts": {
     "start": "node server.js"
