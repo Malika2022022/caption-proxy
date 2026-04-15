@@ -54,10 +54,8 @@ app.get('/captions/:videoId', async (req, res) => {
     const tracks = JSON.parse(tracksMatch[1]);
     const track = tracks.find(t => t.languageCode === lang) || tracks[0];
     if (!track) return res.status(404).send('No track found');
-    const captionUrl = track.baseUrl
-      .replace('&ip=0.0.0.0', '')
-      .replace('&ipbits=0', '')
-      + '&fmt=json3';
+    const rawUrl = track.baseUrl;
+    const captionUrl = (rawUrl.startsWith('http') ? rawUrl : 'https://www.youtube.com' + rawUrl) + '&fmt=json3';
     const captions = await httpsGet(captionUrl, {
       ...headers,
       'Cookie': cookieHeader,
