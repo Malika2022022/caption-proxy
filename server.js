@@ -1,10 +1,11 @@
 const express = require('express');
 const https = require('https');
 const app = express();
+const agent = new https.Agent({ keepAlive: true });
 
 function httpsGet(url, headers) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers }, (res) => {
+    https.get(url, { headers, agent }, (res) => {
       let data = '';
       const cookies = res.headers['set-cookie'] || [];
       res.on('data', chunk => data += chunk);
@@ -81,3 +82,4 @@ app.get('/raw/:videoId', async (req, res) => {
 });
 
 app.listen(process.env.PORT || 3000);
+console.log('Server running on port 3000');
