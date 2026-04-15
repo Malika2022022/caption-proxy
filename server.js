@@ -81,10 +81,14 @@ app.get('/captions/:videoId', async (req, res) => {
     const captionUrl = (rawUrl.startsWith('http') ? rawUrl : 'https://www.youtube.com' + rawUrl) + '&fmt=json3';
     const captions = await httpsGet(captionUrl, {
       ...headers,
-      'Cookie': cookieHeader,
+      'Cookie': cookieHeader + '; CONSENT=YES+cb',
       'Referer': `https://www.youtube.com/watch?v=${videoId}`,
       'Origin': 'https://www.youtube.com',
     });
+
+    console.log('Caption status:', captions.status);
+    console.log('Caption size:', captions.body.length);
+    console.log('Caption preview:', captions.body.substring(0, 200));
     if (captions.body.length === 0) {
       return res.status(500).send(JSON.stringify({
         empty: true,
