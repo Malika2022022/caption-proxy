@@ -1,61 +1,32 @@
 const express = require('express');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
+const fs = require('fs');
 const app = express();
 
 app.get('/captions/:videoId', (req, res) => {
   const videoId = req.params.videoId;
   const lang = req.query.lang || 'en';
-
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  exec(
-    `yt-dlp --write-sub --write-auto-sub --sub-lang ${lang} --skip-download --sub-format json3 -o /tmp/%(id)s.%(ext)s "https://www.youtube.com/watch?v=${videoId}"`,
-    (err, stdout, stderr) => {
-      console.log('stdout:', stdout);
-      console.log('stderr:', stderr);
+  execFile('yt-dlp', [
+    '--write-sub',
+    '--write-auto-sub', 
+    '--sub-lang', lang,
+    '--skip-download',
+    '--sub-format', 'json3',
+    '-o', `/tmp/${videoId}.%(ext)s`,
+    `https://www.youtube.com/watch?v=${videoId}`
+  ], (err, stdout, stderr) => {
+    console.log('stderr:', stderr);
+    if (err) return res.status(500).send('Error: ' + stderr);
 
-      if (err) {
-        return res.status(500).send('yt-dlp error: ' + stderr);
-      }
+    const files = fs.readdirSync('/tmp').filter(f => f.startsWith(videoId));
+    if (files.length === 0) return res.status(404).send('No captions found');
 
-      const fs = require('fs');
-      const path = `/tmp/${videoId}.${lang}.json3`;
-      const altPath = `/tmp/${videoId}.${lang}-orig.json3`;
-
-      let filePath = null;
-      if (fs.existsSync(path)) filePath = path;
-      else if (fs.existsSync(altPath)) filePath = altPath;
-      else {
-        // Find any matching file
-        const files = fs.readdirSync('/tmp').filter(f => f.startsWith(videoId));
-        console.log('Files in /tmp:', files);
-        if (files.length > 0) filePath = `/tmp/${files[0]}`;
-      }
-
-      if (!filePath) {
-        return res.status(404).send('No caption file found. Files: ' + 
-          fs.readdirSync('/tmp').filter(f => f.startsWith(videoId)).join(', '));
-      }
-
-      const data = fs.readFileSync(filePath, 'utf8');
-      fs.unlinkSync(filePath);
-      res.setHeader('Content-Type', 'application/json');
-      res.send(data);
-    }
-  );
-});
-
-app.get('/tracks/:videoId', (req, res) => {
-  const videoId = req.params.videoId;
-  res.setHeader('Access-Control-Allow-Origin', '*');
-
-  exec(
-    `yt-dlp --list-subs "https://www.youtube.com/watch?v=${videoId}"`,
-    (err, stdout, stderr) => {
-      if (err) return res.status(500).send('Error: ' + stderr);
-      res.send(stdout);
-    }
-  );
+    const data = fs.readFileSync(`/tmp/${files[0]}`, 'utf8');
+    files.forEach(f => { try { fs.unlinkSync(`/tmp/${f}`); } catch(e) {} });
+    res.send(data);
+  });
 });
 
 const PORT = process.env.PORT || 8080;
