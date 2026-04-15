@@ -2,4 +2,4 @@
 nixPkgs = ["python3", "python3Packages.pip"]
 
 [phases.install]
-cmds = ["pip3 install youtube-transcript-api", "npm install"]
+cmds = ["pip3 install youtube-transcript-api --break-system-packages", "npm install"]
