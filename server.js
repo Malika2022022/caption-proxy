@@ -1,5 +1,6 @@
-const express = require('express');
-const { YoutubeTranscript } = require('youtube-transcript');
+import express from 'express';
+import { YoutubeTranscript } from 'youtube-transcript';
+
 const app = express();
 
 app.get('/captions/:videoId', async (req, res) => {
