@@ -13,6 +13,7 @@ function httpsGet(url, headers) {
     }).on('error', reject);
   });
 }
+
 const headers = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
@@ -79,6 +80,25 @@ app.get('/captions/:videoId', async (req, res) => {
     if (!track) return res.status(404).send('No track found');
     const rawUrl = track.baseUrl;
     const captionUrl = (rawUrl.startsWith('http') ? rawUrl : 'https://www.youtube.com' + rawUrl) + '&fmt=json3';
+
+    // Try simple URL without signature first
+    const simpleUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${lang}&fmt=json3&type=track&name=&kind=`;
+
+    const simple = await httpsGet(simpleUrl, {
+      ...headers,
+      'Cookie': cookieHeader + '; CONSENT=YES+cb',
+      'Referer': `https://www.youtube.com/watch?v=${videoId}`,
+    });
+
+    console.log('Simple status:', simple.status, 'size:', simple.body.length);
+
+    if (simple.body.length > 0) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Content-Type', 'application/json');
+      return res.send(simple.body);
+    }
+
+    // Fall back to signed URL
     const captions = await httpsGet(captionUrl, {
       ...headers,
       'Cookie': cookieHeader + '; CONSENT=YES+cb',
@@ -86,19 +106,21 @@ app.get('/captions/:videoId', async (req, res) => {
       'Origin': 'https://www.youtube.com',
     });
 
-    console.log('Caption status:', captions.status);
-    console.log('Caption size:', captions.body.length);
-    console.log('Caption preview:', captions.body.substring(0, 200));
+    console.log('Signed status:', captions.status, 'size:', captions.body.length);
+    console.log('Preview:', captions.body.substring(0, 200));
+
     if (captions.body.length === 0) {
       return res.status(500).send(JSON.stringify({
         empty: true,
-        url: captionUrl.substring(0, 200),
         status: captions.status,
+        simpleSize: simple.body.length,
       }));
     }
+
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/json');
     res.send(captions.body);
+
   } catch (e) {
     res.status(500).send('Error: ' + e.message);
   }
