@@ -14,14 +14,25 @@ app.get('/captions/:videoId', (req, res) => {
   execFile('python3', ['-c', `
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import WebshareProxyConfig
-import json
-api = YouTubeTranscriptApi(proxy_config=WebshareProxyConfig(
-    proxy_username="${PROXY_USER}",
-    proxy_password="${PROXY_PASS}"
-))
-result = api.fetch("${videoId}", languages=["${lang}", "en"])
-print(json.dumps([{"text": s.text, "start": s.start, "duration": s.duration} for s in result]))
-`], (err, stdout, stderr) => {
+import json, time
+
+for attempt in range(3):
+    try:
+        api = YouTubeTranscriptApi(proxy_config=WebshareProxyConfig(
+            proxy_username="${PROXY_USER}",
+            proxy_password="${PROXY_PASS}"
+        ))
+        result = api.fetch("${videoId}", languages=["${lang}", "en"])
+        print(json.dumps([{"text": s.text, "start": s.start, "duration": s.duration} for s in result]))
+        break
+    except Exception as e:
+        if attempt < 2:
+            time.sleep(2)
+        else:
+            import sys
+            print(str(e), file=sys.stderr)
+            sys.exit(1)
+`], { timeout: 30000 }, (err, stdout, stderr) => {
     console.log('stderr:', stderr);
     if (err) return res.status(500).send('Error: ' + stderr);
     res.setHeader('Content-Type', 'application/json');
@@ -37,6 +48,7 @@ app.get('/tracks/:videoId', (req, res) => {
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import WebshareProxyConfig
 import json
+
 api = YouTubeTranscriptApi(proxy_config=WebshareProxyConfig(
     proxy_username="${PROXY_USER}",
     proxy_password="${PROXY_PASS}"
@@ -44,7 +56,7 @@ api = YouTubeTranscriptApi(proxy_config=WebshareProxyConfig(
 tlist = api.list("${videoId}")
 result = [{"lang": t.language_code, "name": t.language, "isAuto": t.is_generated} for t in tlist]
 print(json.dumps(result))
-`], (err, stdout, stderr) => {
+`], { timeout: 30000 }, (err, stdout, stderr) => {
     if (err) return res.status(500).send('Error: ' + stderr);
     res.setHeader('Content-Type', 'application/json');
     res.send(stdout);
