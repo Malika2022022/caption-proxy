@@ -99,6 +99,12 @@ app.get('/captions/:videoId', async (req, res) => {
     res.status(500).send('Error: ' + e.message);
   }
 });
+app.get('/raw/:videoId', async (req, res) => {
+  const page = await httpsGet(`https://www.youtube.com/watch?v=${req.params.videoId}`, headers);
+  const idx = page.body.indexOf('captionTracks');
+  if (idx === -1) return res.send('captionTracks NOT FOUND');
+  res.send(page.body.substring(idx, idx + 1000));
+});
 
 app.listen(process.env.PORT || 3000);
 console.log('Server running on port 3000');
