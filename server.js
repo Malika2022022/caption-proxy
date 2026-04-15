@@ -7,15 +7,12 @@ app.get('/captions/:videoId', (req, res) => {
   const lang = req.query.lang || 'en';
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  const script = `
+  execFile('python3', ['-c', `
 from youtube_transcript_api import YouTubeTranscriptApi
 import json
-transcript = YouTubeTranscriptApi.get_transcript('${videoId}', languages=['${lang}'])
-print(json.dumps(transcript))
-`;
-
-  execFile('python3', ['-c', script], (err, stdout, stderr) => {
-    console.log('stderr:', stderr);
+data = YouTubeTranscriptApi.get_transcript('${videoId}', languages=['${lang}'])
+print(json.dumps(data))
+`], (err, stdout, stderr) => {
     if (err) return res.status(500).send('Error: ' + stderr);
     res.setHeader('Content-Type', 'application/json');
     res.send(stdout);
@@ -26,15 +23,13 @@ app.get('/tracks/:videoId', (req, res) => {
   const videoId = req.params.videoId;
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  const script = `
+  execFile('python3', ['-c', `
 from youtube_transcript_api import YouTubeTranscriptApi
 import json
-transcript_list = YouTubeTranscriptApi.list_transcripts('${videoId}')
-tracks = [{'lang': t.language_code, 'name': t.language, 'isAuto': t.is_generated} for t in transcript_list]
-print(json.dumps(tracks))
-`;
-
-  execFile('python3', ['-c', script], (err, stdout, stderr) => {
+tlist = YouTubeTranscriptApi.list_transcripts('${videoId}')
+result = [{'lang': t.language_code, 'name': t.language, 'isAuto': t.is_generated} for t in tlist]
+print(json.dumps(result))
+`], (err, stdout, stderr) => {
     if (err) return res.status(500).send('Error: ' + stderr);
     res.setHeader('Content-Type', 'application/json');
     res.send(stdout);
