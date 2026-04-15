@@ -28,7 +28,15 @@ app.get('/captions/:videoId', (req, res) => {
     res.send(data);
   });
 });
-
+app.get('/test', (req, res) => {
+  execFile('yt-dlp', ['--version'], (err, stdout, stderr) => {
+    res.send({ 
+      version: stdout, 
+      error: err ? err.message : null,
+      stderr: stderr 
+    });
+  });
+});
 const PORT = process.env.PORT || 8080;
 app.listen(PORT);
 console.log('Server running on port', PORT);
