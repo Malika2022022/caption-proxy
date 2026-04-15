@@ -1,5 +1,5 @@
+[build]
+builder = "nixpacks"
+
 [deploy]
 startCommand = "node server.js"
-
-[[services]]
-internalPort = 3000
