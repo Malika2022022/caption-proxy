@@ -1,5 +1,5 @@
 import express from 'express';
-import YoutubeTranscript from 'youtube-transcript';
+import { YoutubeTranscript } from 'youtube-transcript';
 
 const app = express();
 
