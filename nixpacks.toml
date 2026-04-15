@@ -1,5 +1,0 @@
-[phases.setup]
-nixPkgs = ["python3", "python3Packages.pip", "nodejs"]
-
-[phases.install]
-cmds = ["pip3 install 'youtube-transcript-api==0.6.2' --break-system-packages", "npm install"]
