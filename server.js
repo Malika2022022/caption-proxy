@@ -64,7 +64,12 @@ app.get('/captions/:videoId', async (req, res) => {
       'Origin': 'https://www.youtube.com',
     });
     if (captions.body.length === 0) {
-      return res.status(500).send('Empty — URL: ' + captionUrl.substring(0, 150));
+      return res.status(500).send(JSON.stringify({
+      empty: true,
+      url: captionUrl.substring(0, 200),
+      status: captions.status,
+      cookies: cookieHeader.substring(0, 100)
+    }));
     }
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/json');
